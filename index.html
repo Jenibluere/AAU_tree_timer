@@ -19,7 +19,7 @@
 		#settingsWrapper {
 			background-color: #ffcc00;
 			width: 600px;
-			height: 400px;
+			height: content;
 			padding: 30px;
 		}
 		#settingsWrapper div {
@@ -31,7 +31,9 @@
 			height:100%;
 			width: 50%;
 			padding: 100px;
-
+		}
+		p {
+			font-size: 15pt;
 		}
 	</style>
 
@@ -42,30 +44,30 @@
 	<h1>Welcome to Jeni's tree timer!</h1>
 	<div id="instructionsBox">
 		<p>Simply choose your tree from the dropdown list and whether the tree is in an optimum environment, plant the tree and press go.</p>
-		<p>The timer will give a warning, 15 minutes in advance, and a final alarm at the timer finish.</p>
+		<p>The timer will give short notifications when 30%, 50% and 70% through growth. It will also give alarms at 15 minutes remaining and at the end of growth.</p>
 	</div>
 	<div id="settingsWrapper">
 		<!-- <p>Choose tree</p> -->
 		<div class="dropdown">
-		    <select class="form-control" id="treeSelect" style="width:50%">
+		    <select class="form-control" id="treeSelect" style="width:50%" onchange="DDChange()">
 		    	<option value="" selected disabled hidden>Choose tree</option>
-				<option value="apple">apple</option>
-				<option value="hornbeam">hornbeam</option>
-				<option value="oak">oak</option>
-				<option value="cork">cork</option>
-				<option value="grapevine">grapevine</option>
-				<option value="fig">fig</option>
-				<option value="yucca">yucca</option>
-				<option value="avocado">avocado</option>
-				<option value="poplar">poplar</option>
-				<option value="lemon">lemon</option>
-				<option value="cedar">cedar</option>
-				<option value="banana">banana</option>
-				<option value="traveler">traveler's tree</option>
-				<!-- <option value="debug">test</option> -->
+				<option value="Apple">apple</option>
+				<option value="Hornbeam">hornbeam</option>
+				<option value="Oak">oak</option>
+				<option value="Cork">cork</option>
+				<option value="Grapevine">grapevine</option>
+				<option value="Fig">fig</option>
+				<option value="Yucca">yucca</option>
+				<option value="Avocado">avocado</option>
+				<option value="Poplar">poplar</option>
+				<option value="Lemon">lemon</option>
+				<option value="Cedar">cedar</option>
+				<option value="Banana">banana</option>
+				<option value="Traveler">traveler's tree</option>
+				<!-- <option value="Debug">test</option> -->
 			</select>
 		</div>
-		
+		<p id="aboveDropdown"></p>
 	
 	<button class="btn btn-primary" id="button" type="button">Start</button>
 	<div id="timerWrapper">
@@ -82,7 +84,46 @@
 <!-- <script src="timerscript.js"></script> -->
 
 <script>
-	
+	var treeDict = {
+		//type : [mature_time, climate]
+		"Apple": [14.3, "temperate"],
+		"Hornbeam": [8, "N/A"],
+		"Oak": [49, "temperate"],
+		"Cork": [5+(43/60),"temperate"],
+		"Grapevine": [5+(43/60),"temperate"],
+		"Fig": [5+(43/60),"tropical"],
+		"Yucca": [26,"arid"],
+		"Avocado": [5+(43/60),"tropical"],
+		"Poplar": [12,"N/A"],
+		"Lemon": [14.3,"arid"],
+		"Cedar": [26, "temperate"],
+		"Banana": [26,"tropical"],
+		"Traveler": [14.3,"tropical"],
+		"Debug" : [0.0008,"N/A"]
+	};
+
+	function seconds2Time(seconds) {
+		var hours   = Math.floor(seconds / 3600);
+	    var minutes = Math.floor((seconds - (hours * 3600)) / 60);
+	    var seconds = seconds - (hours * 3600) - (minutes * 60);
+	    var time = "";
+
+	    if (hours != 0) {
+	      time = hours+":";
+	    }
+	    if (minutes != 0 || time !== "") {
+	      minutes = (minutes < 10 && time !== "") ? "0"+minutes : String(minutes);
+	      time += minutes+":";
+	    }
+	    if (time === "") {
+	      time = seconds+"s";
+	    }
+	    else {
+	      time += (seconds < 10) ? "0"+seconds : String(seconds);
+	    }
+	    return time;
+	}
+
 	(function() {
 
 		var root = document.documentElement;
@@ -98,24 +139,6 @@
 	    var expected = 0;
 	    var time = 0;
 	    var t = clearTimeout()
-
-		var treeDict = {
-			//type : [mature_time, climate]
-			"apple": [14.3, "temperate"],
-			"hornbeam": [8, "N/A"],
-			"oak": [49, "temperate"],
-			"cork": [5+(43/60),"temperate"],
-			"grapevine": [5+(43/60),"temperate"],
-			"fig": [5+(43/60),"tropical"],
-			"yucca": [26,"arid"],
-			"avocado": [5+(43/60),"tropical"],
-			"poplar": [12,"N/A"],
-			"lemon": [14.3,"arid"],
-			"cedar": [26, "temperate"],
-			"banana": [26,"tropical"],
-			"traveler": [14.3,"tropical"],
-			"debug" : [0.0008,"N/A"]
-		};
 
 		button.addEventListener("click", function () {
 			if (running){
@@ -141,10 +164,18 @@
 
 		    if(seconds == 900){
 		    	document.querySelector("#timerWrapper").style.color = "red";
-		    	var minuteWarning = new Audio("closeSounds.mp3")
+		    	var minuteWarning15 = new Audio("closeSounds.mp3");
+		    	minuteWarning15.play();
+		    }
+
+		    if(seconds == inBy30 || seconds == inBy50 || seconds == inBy70) {
+		    	var percWarning = new Audio("notif.mp3");
+		    	percWarning.play();
 		    }
 
 			if (seconds <= 0) {
+				var minuteWarning = new Audio("rush.mp3");
+		    	minuteWarning.play();
 				stop();
 				running = !running;
 				clearTimeout(t);
@@ -159,34 +190,15 @@
 			// get value time from dropdown
 			button.innerText = "Stop";
 			time = treeDict[e.options[e.selectedIndex].value][0];
-			seconds = Math.round(time*60**2); // Convert time to secs			
+			seconds = Math.round(time*60**2); // Convert time to secs
+			inBy30 = seconds*0.3;
+			inBy50 = seconds*0.5;
+			inBy70 = seconds*0.7;		
 			expected = Date.now() + interval
 			counter.innerText = seconds2Time(seconds);
 
 			t = setTimeout(step, interval);
 				
-		}
-
-		function seconds2Time(seconds) {
-			var hours   = Math.floor(seconds / 3600);
-		    var minutes = Math.floor((seconds - (hours * 3600)) / 60);
-		    var seconds = seconds - (hours * 3600) - (minutes * 60);
-		    var time = "";
-
-		    if (hours != 0) {
-		      time = hours+":";
-		    }
-		    if (minutes != 0 || time !== "") {
-		      minutes = (minutes < 10 && time !== "") ? "0"+minutes : String(minutes);
-		      time += minutes+":";
-		    }
-		    if (time === "") {
-		      time = seconds+"s";
-		    }
-		    else {
-		      time += (seconds < 10) ? "0"+seconds : String(seconds);
-		    }
-		    return time;
 		}
 
 		function stop(){
@@ -195,6 +207,9 @@
 		}
 	})();
 
+	function DDChange(){
+		document.querySelector('#aboveDropdown').innerText = document.querySelector("#treeSelect").options[document.querySelector("#treeSelect").selectedIndex].value + "s take " + seconds2Time(treeDict[document.querySelector("#treeSelect").options[document.querySelector("#treeSelect").selectedIndex].value][0]*60**2);
+	}
 </script>
 
 </body>
