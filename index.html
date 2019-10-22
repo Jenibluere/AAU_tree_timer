@@ -36,6 +36,7 @@
 		<div class="counter">1</div>
 		<button class="button">Start</button>
 	</div>
+	<div id="errorBox"></div>
 </div>
 
 <!-- Bootstrap JS -->
@@ -57,6 +58,7 @@
 	    var seconds = 0;
 	    var secondsInitial = 0;
 	    var e = document.getElementbyID("treeSelect");
+	    var interval = 1000; // ms
 
 		var treeDict = {
 			//type : [mature_time, climate]
@@ -88,24 +90,36 @@
 			// get value time from dropdown
 			var time = treeDict[e.options[e.selectedIndex].value][0];
 			seconds = time*60**2; // Convert time to secs
+			var expected = Date.now() + interval
 
-			counter.timeText = secondsInitial = seconds;
+			counter.innerText = seconds;
 
-			timer = setInterval(function () {
-				//update values
-				counter.timeText = --seconds;
+			setTimeout(step, interval);
+			function step() {
+			    var dt = Date.now() - expected; // the drift (positive for overshooting)
+			    if (dt > interval) {
+			        // something really bad happened. Maybe the browser (tab) was inactive?
+			        var errorSound = new Audio('erro.mp3');
+					errorSound.play();
+					document.querySelector('#errorBox').innerText = "Your browser may have skipped time, please double check this."
+			    }
+
+			    counter.innerText = seconds;
 				if (!seconds) {
 					stop();
 					running = false;
 				}
-			}, 1000); // update time every second.
+
+			    expected += interval;
+			    setTimeout(step, Math.max(0, interval - dt)); // take into account drift
+			}	
 		}
 
 		function stop(){
 			clearInterval(timer);
 		}
 	})();
-	
+
 </script>
 
 </body>
