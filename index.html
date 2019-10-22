@@ -3,8 +3,41 @@
 	<title>Jeni's tree timer</title>
 	<!-- Bootstrap CSS -->
 	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+	<style>
+		body {
+			padding: 50px;
+			background-color: lightgrey;
+			text-align: center;
+		}
+		#timerWrapper {
+			background-color: lightgreen;
+			padding: 10px;
+			width: content;
+			font-size: 50pt;
+		}
+		#settingsWrapper {
+			background-color: #ffcc00;
+			width: 600px;
+			height: 400px;
+			padding: 30px;
+		}
+		#settingsWrapper div {
+			/*padding: 30px;*/
+			margin: 30px;
+		}
+		#contentWrapper {
+			background-color: lightyellow;
+			height:100%;
+			width: 50%;
+			padding: 100px;
+
+		}
+	</style>
+
 </head>
 <body>
+<center>
 <div id="contentWrapper">
 	<h1>Welcome to Jeni's tree timer!</h1>
 	<div id="instructionsBox">
@@ -12,9 +45,10 @@
 		<p>The timer will give a warning, 15 minutes in advance, and a final alarm at the timer finish.</p>
 	</div>
 	<div id="settingsWrapper">
-		<p>Choose tree</p>
+		<!-- <p>Choose tree</p> -->
 		<div class="dropdown">
-		    <select id="treeSelect">
+		    <select class="form-control" id="treeSelect" style="width:50%">
+		    	<option value="" selected disabled hidden>Choose tree</option>
 				<option value="apple">apple</option>
 				<option value="hornbeam">hornbeam</option>
 				<option value="oak">oak</option>
@@ -28,17 +62,19 @@
 				<option value="cedar">cedar</option>
 				<option value="banana">banana</option>
 				<option value="traveler">traveler's tree</option>
+				<!-- <option value="debug">test</option> -->
 			</select>
 		</div>
 		
-	</div>
+	
+	<button class="btn btn-primary" id="button" type="button">Start</button>
 	<div id="timerWrapper">
 		<div class="counter">1</div>
-		<button class="button">Start</button>
 	</div>
 	<div id="errorBox"></div>
+	</div>
 </div>
-
+</center>
 <!-- Bootstrap JS -->
 <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
@@ -51,7 +87,7 @@
 
 		var root = document.documentElement;
 	    var container = document.querySelector('.container');
-	    var button = document.querySelector('.button');
+	    var button = document.querySelector('#button');
 	    var counter = document.querySelector('.counter');
 	    var running = false;
 	    var timer = null;
@@ -59,6 +95,9 @@
 	    var secondsInitial = 0;
 	    var e = document.querySelector("#treeSelect");
 	    var interval = 1000; // ms
+	    var expected = 0;
+	    var time = 0;
+	    var t = clearTimeout()
 
 		var treeDict = {
 			//type : [mature_time, climate]
@@ -75,6 +114,7 @@
 			"cedar": [26, "temperate"],
 			"banana": [26,"tropical"],
 			"traveler": [14.3,"tropical"],
+			"debug" : [0.0008,"N/A"]
 		};
 
 		button.addEventListener("click", function () {
@@ -86,37 +126,72 @@
 			running = !running;
 		});
 
+		function step() {
+			//console.log("step")
+		    var dt = Date.now() - expected; // the drift (positive for overshooting)
+		    if (dt > interval) {
+		        // something really bad happened. Maybe the browser (tab) was inactive?
+		        var errorSound = new Audio('erro.mp3');
+				errorSound.play();
+				document.querySelector('#errorBox').innerText = "Your browser may have skipped time, please double check this.";
+		    }
+			console.log(seconds2Time(seconds));
+		    counter.innerText = seconds2Time(seconds);
+		    expected += interval;
+
+		    if(seconds == 900){
+		    	document.querySelector("#timerWrapper").style.color = "red";
+		    	var minuteWarning = new Audio("closeSounds.mp3")
+		    }
+
+			if (seconds <= 0) {
+				stop();
+				running = !running;
+				clearTimeout(t);
+			} else {
+				t = setTimeout(step, Math.max(0, interval - dt)); // take into account drift
+			}
+
+		    seconds -= 1;
+		}
+
 		function start() {
 			// get value time from dropdown
-			var time = treeDict[e.options[e.selectedIndex].value][0];
-			seconds = time*60**2; // Convert time to secs
-			var expected = Date.now() + interval
+			button.innerText = "Stop";
+			time = treeDict[e.options[e.selectedIndex].value][0];
+			seconds = Math.round(time*60**2); // Convert time to secs			
+			expected = Date.now() + interval
+			counter.innerText = seconds2Time(seconds);
 
-			counter.innerText = seconds;
+			t = setTimeout(step, interval);
+				
+		}
 
-			setTimeout(step, interval);
-			function step() {
-			    var dt = Date.now() - expected; // the drift (positive for overshooting)
-			    if (dt > interval) {
-			        // something really bad happened. Maybe the browser (tab) was inactive?
-			        var errorSound = new Audio('erro.mp3');
-					errorSound.play();
-					document.querySelector('#errorBox').innerText = "Your browser may have skipped time, please double check this."
-			    }
+		function seconds2Time(seconds) {
+			var hours   = Math.floor(seconds / 3600);
+		    var minutes = Math.floor((seconds - (hours * 3600)) / 60);
+		    var seconds = seconds - (hours * 3600) - (minutes * 60);
+		    var time = "";
 
-			    counter.innerText = seconds;
-				if (!seconds) {
-					stop();
-					running = false;
-				}
-
-			    expected += interval;
-			    setTimeout(step, Math.max(0, interval - dt)); // take into account drift
-			}	
+		    if (hours != 0) {
+		      time = hours+":";
+		    }
+		    if (minutes != 0 || time !== "") {
+		      minutes = (minutes < 10 && time !== "") ? "0"+minutes : String(minutes);
+		      time += minutes+":";
+		    }
+		    if (time === "") {
+		      time = seconds+"s";
+		    }
+		    else {
+		      time += (seconds < 10) ? "0"+seconds : String(seconds);
+		    }
+		    return time;
 		}
 
 		function stop(){
-			clearInterval(timer);
+			button.innerText = "Start";
+			clearTimeout(t);
 		}
 	})();
 
