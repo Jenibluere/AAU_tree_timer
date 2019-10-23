@@ -67,6 +67,12 @@
 				<!-- <option value="Debug">test</option> -->
 			</select>
 		</div>
+		<div class="checkbox">
+		  <label>
+		    <input id="climateBox" type="checkbox" value="climate" onchange="DDChange()">
+		    Optimal climate
+		  </label>
+		</div>
 		<p id="aboveDropdown"></p>
 	
 	<button class="btn btn-primary" id="button" type="button">Start</button>
@@ -84,6 +90,7 @@
 <!-- <script src="timerscript.js"></script> -->
 
 <script>
+	var climate = 1;
 	var treeDict = {
 		//type : [mature_time, climate]
 		"Apple": [14.3, "temperate"],
@@ -105,7 +112,7 @@
 	function seconds2Time(seconds) {
 		var hours   = Math.floor(seconds / 3600);
 	    var minutes = Math.floor((seconds - (hours * 3600)) / 60);
-	    var seconds = seconds - (hours * 3600) - (minutes * 60);
+	    var seconds = Math.round(seconds - (hours * 3600) - (minutes * 60));
 	    var time = "";
 
 	    if (hours != 0) {
@@ -150,7 +157,6 @@
 		});
 
 		function step() {
-			//console.log("step")
 		    var dt = Date.now() - expected; // the drift (positive for overshooting)
 		    if (dt > interval) {
 		        // something really bad happened. Maybe the browser (tab) was inactive?
@@ -189,14 +195,13 @@
 		function start() {
 			// get value time from dropdown
 			button.innerText = "Stop";
-			time = treeDict[e.options[e.selectedIndex].value][0];
-			seconds = Math.round(time*60**2); // Convert time to secs
+			seconds = (treeDict[document.querySelector("#treeSelect").options[document.querySelector("#treeSelect").selectedIndex].value][0]*60**2)*climate
 			inBy30 = seconds*0.3;
 			inBy50 = seconds*0.5;
 			inBy70 = seconds*0.7;		
 			expected = Date.now() + interval
 			counter.innerText = seconds2Time(seconds);
-
+			console.log(time)
 			t = setTimeout(step, interval);
 				
 		}
@@ -208,7 +213,20 @@
 	})();
 
 	function DDChange(){
-		document.querySelector('#aboveDropdown').innerText = document.querySelector("#treeSelect").options[document.querySelector("#treeSelect").selectedIndex].value + "s take " + seconds2Time(treeDict[document.querySelector("#treeSelect").options[document.querySelector("#treeSelect").selectedIndex].value][0]*60**2);
+		var name = document.querySelector("#treeSelect").options[document.querySelector("#treeSelect").selectedIndex].value;
+		var climateModifier = document.querySelector("#climateBox");
+		if(climateModifier.checked){
+			climate = 0.69241452991452991452991452991453;
+			var climateText = " in this climate."
+		} else {
+			climate = 1;
+			var climateText = "."
+		}
+		climateModifier.innerText = "Optimal climate (" + treeDict[document.querySelector("#treeSelect").options[document.querySelector("#treeSelect").selectedIndex].value][1] + ")";
+		var timeDisplay = (treeDict[document.querySelector("#treeSelect").options[document.querySelector("#treeSelect").selectedIndex].value][0]*60**2)*(climate);
+		document.querySelector('#aboveDropdown').innerText = name + "s take " + seconds2Time(timeDisplay) + climateText;
+
+		return timeDisplay
 	}
 </script>
 
